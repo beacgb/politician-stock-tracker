@@ -12,6 +12,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Restore cache
+        uses: actions/cache@v3
+        with:
+          path: trade_cache.json
+          key: trade-cache-${{ github.run_id }}
+          restore-keys: trade-cache-
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -27,3 +34,9 @@ jobs:
           EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
           EMAIL_RECIPIENT: ${{ secrets.EMAIL_RECIPIENT }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+      - name: Save cache
+        uses: actions/cache@v3
+        with:
+          path: trade_cache.json
+          key: trade-cache-${{ github.run_id }}
