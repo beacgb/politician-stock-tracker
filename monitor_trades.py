@@ -32,6 +32,25 @@ def save_cache(data):
     with open(CACHE_FILE, "w") as f:
         json.dump(data, f)
 
+# Function to fetch market news for context
+def get_market_context(stock_ticker):
+    """
+    Fetches recent news headlines related to the stock ticker.
+    This helps explain why a politician might be trading the stock.
+    """
+    try:
+        news_api_url = f"https://newsapi.org/v2/everything?q={stock_ticker}&sortBy=publishedAt&apiKey=YOUR_NEWS_API_KEY"
+        response = requests.get(news_api_url)
+        articles = response.json().get("articles", [])
+
+        if articles:
+            latest_news = articles[0]["title"]  # Get the most recent article
+            return f"Market Context: {latest_news}"
+        else:
+            return "Market Context: No major recent news found."
+    except Exception:
+        return "Market Context: Could not fetch news at this time."
+
 # Function to scrape CapitolTrades
 def scrape_capitol_trades():
     url = "https://www.capitoltrades.com/"
@@ -43,7 +62,7 @@ def scrape_capitol_trades():
     
     for row in rows:
         cols = row.find_all("td")
-        if len(cols) < 6:
+        if len(cols) < 7:  # Ensure the expected number of columns exist
             continue
 
         politician = cols[0].text.strip()
@@ -52,11 +71,14 @@ def scrape_capitol_trades():
         trade_type = cols[3].text.strip()
         shares = cols[4].text.strip()
         price = cols[5].text.strip()
+        trade_date = cols[6].text.strip()
 
         try:
             total_amount = float(shares.replace(",", "")) * float(price.replace("$", "").replace(",", ""))
         except ValueError:
             total_amount = "N/A"
+
+        market_context = get_market_context(ticker)
 
         trades.append({
             "politician": politician,
@@ -65,7 +87,9 @@ def scrape_capitol_trades():
             "trade_type": trade_type,
             "shares": shares,
             "price": price,
-            "total_amount": total_amount
+            "total_amount": total_amount,
+            "trade_date": trade_date,
+            "market_context": market_context
         })
 
     return trades
