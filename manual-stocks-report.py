@@ -149,6 +149,3 @@ if todays_trades:
     print(df.to_string(index=False))
 else:
     print("No political stock transactions reported today.")
-
-# Send trades to Discord
-send_discord_notification(trades)
