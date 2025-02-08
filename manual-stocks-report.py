@@ -106,9 +106,6 @@ trades = scrape_capitol_trades()
 # Debugging: Print trades before sending to Discord
 print("Scraped Trades:", trades)  
 
-# Send trades to Discord
-send_discord_notification(trades)
-
 # Function to send a Discord webhook notification
 def send_discord_notification(trades):
     if not trades:
@@ -152,3 +149,6 @@ if todays_trades:
     print(df.to_string(index=False))
 else:
     print("No political stock transactions reported today.")
+
+# Send trades to Discord
+send_discord_notification(trades)
