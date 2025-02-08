@@ -101,14 +101,16 @@ def scrape_capitol_trades():
 
 # Function to send a Discord webhook notification
 def send_discord_notification(trades):
+    message = "**Today's Political Stock Transactions:**\n\n"
     if not trades:
-        message = "No political stock transactions reported today."
+        message += "No transactions reported today."
     else:
         df = pd.DataFrame(trades)
-        message = "**Today's Political Stock Transactions:**\n\n" + df.to_string(index=False)
+        message += df.to_string(index=False)
 
     payload = {"content": f"```{message}```"}
-    requests.post(DISCORD_WEBHOOK_URL, data=json.dumps(payload), headers={"Content-Type": "application/json"})
+    response = requests.post(DISCORD_WEBHOOK_URL, json=payload, headers={"Content-Type": "application/json"})
+    print(f"Discord Response: {response.status_code}, {response.text}")  # Debugging
 
 # Function to filter today's trades and add analysis
 def get_todays_trades():
