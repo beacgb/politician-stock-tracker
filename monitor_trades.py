@@ -5,25 +5,42 @@ import smtplib
 from email.mime.text import MIMEText
 import json
 import time
+import os
 
 # Email settings
-SMTP_SERVER = "smtp.gmail.com"  # Change if using another provider
+SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
-EMAIL_SENDER = "beatricecgomes@gmail.com"
-EMAIL_PASSWORD = "pvcydhwmsmzbxwew"  # Use an app password if needed
-EMAIL_RECIPIENT = "tjandring4@gmail.com"
+EMAIL_SENDER = os.getenv("EMAIL_SENDER")
+EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
+EMAIL_RECIPIENT = os.getenv("EMAIL_RECIPIENT")
 
 # Discord Webhook URL
-DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1337650682672709694/_KTb5cVs4cQ-SUdCO24N9pNEtK8xvDad3C3-1ihrdU8qZaMn9URhROeuBVhyiXTcie_U"
+DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
+
+# Cache file to store the last known trades
+CACHE_FILE = "trade_cache.json"
+
+# Function to load cached data
+def load_cache():
+    if os.path.exists(CACHE_FILE):
+        with open(CACHE_FILE, "r") as f:
+            return json.load(f)
+    return []
+
+# Function to save cache data
+def save_cache(data):
+    with open(CACHE_FILE, "w") as f:
+        json.dump(data, f)
 
 # Function to scrape CapitolTrades
 def scrape_capitol_trades():
     url = "https://www.capitoltrades.com/"
     response = requests.get(url)
     soup = BeautifulSoup(response.text, "html.parser")
-    
+
     trades = []
-    rows = soup.select("table tbody tr")  
+    rows = soup.select("table tbody tr")
+    
     for row in rows:
         cols = row.find_all("td")
         if len(cols) < 6:
@@ -41,13 +58,21 @@ def scrape_capitol_trades():
         except ValueError:
             total_amount = "N/A"
 
-        trades.append([politician, stock, ticker, trade_type, shares, price, total_amount])
+        trades.append({
+            "politician": politician,
+            "stock": stock,
+            "ticker": ticker,
+            "trade_type": trade_type,
+            "shares": shares,
+            "price": price,
+            "total_amount": total_amount
+        })
 
     return trades
 
 # Function to send an email alert
 def send_email(trades):
-    df = pd.DataFrame(trades, columns=["Politician", "Stock", "Ticker", "Type", "Shares", "Price", "Total Amount"])
+    df = pd.DataFrame(trades)
     email_body = df.to_html(index=False)
 
     msg = MIMEText(email_body, "html")
@@ -62,7 +87,7 @@ def send_email(trades):
 
 # Function to send a Discord webhook notification
 def send_discord_notification(trades):
-    df = pd.DataFrame(trades, columns=["Politician", "Stock", "Ticker", "Type", "Shares", "Price", "Total Amount"])
+    df = pd.DataFrame(trades)
     message = "**New Political Stock Trades Detected:**\n\n" + df.to_string(index=False)
 
     payload = {"content": f"```{message}```"}
@@ -70,17 +95,14 @@ def send_discord_notification(trades):
 
 # Function to monitor trades and notify when there are new transactions
 def monitor_trades():
-    last_trades = []
-    
-    while True:
-        trades = scrape_capitol_trades()
-        
-        if trades and trades != last_trades:  # Only notify if there are new trades
-            send_email(trades)
-            send_discord_notification(trades)
-            last_trades = trades  # Update last known trades
+    last_trades = load_cache()
+    new_trades = scrape_capitol_trades()
 
-        time.sleep(3600)  # Wait for 1 hour before checking again
+    # Only notify if new trades are detected
+    if new_trades and new_trades != last_trades:
+        send_email(new_trades)
+        send_discord_notification(new_trades)
+        save_cache(new_trades)  # Update the cache with new trades
 
-# Start monitoring
+# Run monitoring
 monitor_trades()
