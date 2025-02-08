@@ -100,7 +100,13 @@ def scrape_capitol_trades():
     return trades
 
 print("Sending the following data to Discord:")
-print(trades)
+# Get trades
+trades = scrape_capitol_trades()
+
+# Debugging: Print trades before sending to Discord
+print("Scraped Trades:", trades)  
+
+# Send trades to Discord
 send_discord_notification(trades)
 
 # Function to send a Discord webhook notification
